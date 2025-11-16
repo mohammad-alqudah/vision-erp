@@ -25,11 +25,8 @@ DEBUG = env.bool("DEBUG", default=True)
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
 
 # Application definition
-# Multitenancy is enabled only if MULTITENANT_ENABLED=True (and Postgres is used)
-MULTITENANT_ENABLED = env.bool("MULTITENANT_ENABLED", default=False)
-
-SHARED_APPS = [
-    "django_tenants" if MULTITENANT_ENABLED else None,  # placed first when enabled
+INSTALLED_APPS = [
+    "users",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -38,18 +35,7 @@ SHARED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "core",
-    "tenants",
 ]
-
-TENANT_APPS = [
-    # Your tenant-specific apps go here. Core can be shared or tenant-aware depending on design.
-]
-
-# Filter out None entries and merge when multitenancy is enabled
-if MULTITENANT_ENABLED:
-    INSTALLED_APPS = [app for app in SHARED_APPS if app] + TENANT_APPS
-else:
-    INSTALLED_APPS = [app for app in SHARED_APPS if app]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -61,9 +47,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-if MULTITENANT_ENABLED:
-    # Tenant middleware must come early in the stack
-    MIDDLEWARE.insert(1, "django_tenants.middleware.main.TenantMainMiddleware")
+
 
 ROOT_URLCONF = "erp.urls"
 
@@ -84,20 +68,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "erp.wsgi.application"
 
-# Database
-# Prefer DATABASE_URL if provided; default to sqlite
-db_url = env("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
+# Database (SQLite by default)
 DATABASES = {
-    "default": env.db("DATABASE_URL", default=db_url)
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
-
-if MULTITENANT_ENABLED:
-    # Force django-tenants Postgres backend when enabled
-    DATABASES["default"]["ENGINE"] = "django_tenants.postgresql_backend"
-
-# django-tenants model pointers (required for imports even if disabled)
-TENANT_MODEL = "tenants.Tenant"
-TENANT_DOMAIN_MODEL = "tenants.Domain"
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -138,3 +115,6 @@ REST_FRAMEWORK = {
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Custom user model
+AUTH_USER_MODEL = "users.User"
